@@ -8,16 +8,18 @@ from dbhelper import db
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True)
+    name = db.Column(db.String(80), unique=True)
+    fb_id = db.Column(db.String(80), unique=True)
 
     # backref attributes:
     # ratings
 
-    def __init__(self, username):
-        self.username = username
+    def __init__(self, name, fb_id):
+        self.name = name
+        self.fb_id = fb_id
 
     def __repr__(self):
-        return '<User %r>' % self.username
+        return '<User %r>' % self.name
 
     def to_JSON(self):
         return {
