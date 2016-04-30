@@ -24,7 +24,7 @@ class User(db.Model):
     def to_JSON(self):
         return {
             'id': self.id,
-            'username': self.username
+            'name': self.name
         }
 
 

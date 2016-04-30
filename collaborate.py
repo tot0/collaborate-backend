@@ -98,11 +98,11 @@ def test_db():
     ratings = Rating.query.all()
 
     le_return = json.dumps({
-        'users': [user.username for user in users],
+        'users': [user.name for user in users],
         'lecturers': [lec.name for lec in lecturers],
         'courses': [[course.code, course.title, course.description, course.lecturer.name] for course in courses],
         'offerings': [[offering.course.code, offering.year, offering.session] for offering in offerings],
-        'ratings': [[rating.user.username, rating.offering.course.code, rating.overall_satisfaction] for rating in ratings]
+        'ratings': [[rating.user.name, rating.offering.course.code, rating.overall_satisfaction] for rating in ratings]
     })
 
     '''db.session.delete(admin)
@@ -114,7 +114,6 @@ def test_db():
     db.session.commit()'''
 
     return le_return
-
 
 
 @app.route("/verify_token")
