@@ -17,6 +17,7 @@ from flask import (
 from functools import wraps, update_wrapper
 from sqlalchemy.sql.expression import or_
 import requests
+import urllib
 
 from dbhelper import db
 from models import (
@@ -42,7 +43,7 @@ def needs_auth(f):
             if not token:
                 abort(401)
 
-            r = requests.get('https://graph.facebook.com/me?access_token=%s' % token)
+            r = requests.get('https://graph.facebook.com/me?access_token=%s' % urllib.quote(token))
             j = r.json()
 
             name = j['name']
