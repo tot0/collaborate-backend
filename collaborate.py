@@ -45,9 +45,13 @@ def needs_auth(f):
 
             r = requests.get('https://graph.facebook.com/me?access_token=%s' % urllib.quote(token))
             j = r.json()
-
             name = j['name']
             fb_id = j['id']
+
+            r = requests.get('https://graph.facebook.com/me/picture?redirect=false&access_token=%s' %
+                             urllib.quote(token))
+            j = r.json()
+            pic = j['data']['url']
         except:
             abort(401)
 
@@ -55,8 +59,9 @@ def needs_auth(f):
         user = User.query.filter_by(fb_id=fb_id).first()
         if not user:
             # create the user
-            user = User(name=name, fb_id=fb_id)
+            user = User(name=name, fb_id=fb_id, pic=pic)
         user.name = name
+        user.pic = pic
 
         db.session.add(user)
         db.session.commit()
@@ -114,7 +119,6 @@ def crossdomain(origin=None, methods=None, headers=None,
 @crossdomain(origin='*')
 def post_rating(user, offering_id):
     try:
-        print(request.data)
         rating_json = json.loads(request.data)
     except:
         return jsonify(error="invalid json")
@@ -176,7 +180,24 @@ def search_courses():
     return resp
 
 
+@app.route("/ratings/recent", methods=['GET'])
+@crossdomain(origin='*')
+def recent_ratings():
+    try:
+        count = int(request.args.get('count', 5))
+    except:
+        return jsonify(error="count needs to be a positive number")
+    if count < 0:
+        return jsonify(error="count needs to be a positive number")
+
+    ratings = Rating.query.order_by(Rating.id.desc()).limit(count).all()
+    resp = Response(json.dumps(ratings, default=lambda o: o.to_JSON()))
+    resp.headers['Content-Type'] = 'application/json'
+    return resp
+
 # test endpoints, please ignore
+
+
 @app.route("/get_gentrified", methods=['GET'])
 @crossdomain(origin='*')
 def get_gentrified():
@@ -190,4 +211,4 @@ def verify_token(user):
     return "well meme'd, {}".format(user.name)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0')
+    app.run()
