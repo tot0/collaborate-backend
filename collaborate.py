@@ -105,8 +105,10 @@ def crossdomain(origin=None, methods=None, headers=None,
             h['Access-Control-Allow-Origin'] = origin
             h['Access-Control-Allow-Methods'] = get_methods()
             h['Access-Control-Max-Age'] = str(max_age)
-            if headers is not None:
-                h['Access-Control-Allow-Headers'] = headers
+
+            #if headers is not None:
+            #    h['Access-Control-Allow-Headers'] = headers
+            h['Access-Control-Allow-Headers'] = 'X-Access-Token, Content-Type'
             return resp
 
         f.provide_automatic_options = False
@@ -114,9 +116,9 @@ def crossdomain(origin=None, methods=None, headers=None,
     return decorator
 
 
-@app.route("/offerings/<offering_id>/ratings", methods=['POST'])
-@needs_auth
+@app.route("/offerings/<offering_id>/ratings", methods=['POST', 'OPTIONS'])
 @crossdomain(origin='*')
+@needs_auth
 def post_rating(user, offering_id):
     try:
         rating_json = json.loads(request.data)
