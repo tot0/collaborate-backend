@@ -32,7 +32,8 @@ with app.app_context():
     existing_lecturers = set()
 
     for year in xrange(CURRENT_YEAR, MIN_YEAR-1, -1):
-        print year
+        print '-'*50
+        print 'YEAR:', year
         tt_directory = '%s/%d' % (TIMETABLE_DIR, year)
         hb_directory = '%s/%d' % (COURSES_DIR, year)
         filenames = os.listdir(tt_directory)
@@ -75,7 +76,7 @@ with app.app_context():
 
                 existing_courses.add(course)
             else:
-                course_obj = Course.query.filter_by(code=course)
+                course_obj = Course.query.filter_by(code=course).first()
 
             print '  %s %s' % (course, course_name)
 
@@ -101,15 +102,16 @@ with app.app_context():
                         lecturer_obj = Lecturer(name=lecturer)
                         db.session.add(lecturer_obj)
                         db.session.commit()
-                    else:
-                        lecturer_obj = Lecturer.query.filter_by(name=lecturer)
 
-                    offering_obj = Offering(course=course_obj,
+                        existing_lecturers.add(lecturer)
+                    else:
+                        lecturer_obj = Lecturer.query.filter_by(name=lecturer).first()
+
+                    offering_obj = Offering(course_id=course_obj.id,
                                             description=desc,
-                                            lecturer=lecturer_obj,
+                                            lecturer_id=lecturer_obj.id,
                                             year=year,
                                             semester=session)
                     db.session.add(offering_obj)
                     db.session.commit()
 
-        break
