@@ -57,10 +57,10 @@ class Course(db.Model):
         }
 
     def get_aggregate_ratings(self):
-        sems = ['sem_0', 'sem_1', 'sem_2', 'overall']
+        sems = ['sem_0', 'sem_1', 'sem_2']
 
-        ratings = {sem: {'num_ratings': 0} for sem in sems}
-        sem_ratings_sums = {sem: {'sum_ratings': 0, 'num_recommendations': 0} for sem in sems}
+        ratings = {sem: {'num_ratings': 0.0} for sem in sems}
+        sem_ratings_sums = {sem: {'sum_ratings': 0.0, 'num_recommendations': 0.0} for sem in sems}
         for offering in self.offerings:
             rating = db.session.query(func.sum(Rating.overall_satisfaction),
                                       func.count(Rating.id))\
@@ -77,20 +77,15 @@ class Course(db.Model):
                     ratings[sem]['num_ratings'] += rating_count
                     sem_ratings_sums[sem]['sum_ratings'] += rating_sum
                     sem_ratings_sums[sem]['num_recommendations'] += num_recommendations
-
-                    ratings['overall']['num_ratings'] += rating_count
-                    sem_ratings_sums['overall']['sum_ratings'] += rating_sum
-                    sem_ratings_sums['overall']['num_recommendations'] += num_recommendations
                     break
-
         for sem in sems:
             if ratings[sem]['num_ratings']:
-                ratings[sem]['avg_rating'] = sem_ratings_sums[sem]['sum_ratings'] / float(ratings[sem]['num_ratings'])
+                ratings[sem]['avg_rating'] = int(sem_ratings_sums[sem]['sum_ratings'] / ratings[sem]['num_ratings'])
                 ratings[sem]['percent_recommended'] = (
-                    sem_ratings_sums[sem]['num_recommendations'] / float(ratings[sem]['num_ratings']) * 100)
+                    sem_ratings_sums[sem]['num_recommendations'] / ratings[sem]['num_ratings']) * 100
             else:
-                ratings[sem]['avg_rating'] = 0.0
-                ratings[sem]['percent_recommended'] = 0.0
+                ratings[sem]['avg_rating'] = 0
+                ratings[sem]['percent_recommended'] = 0
         return ratings
 
 
@@ -157,8 +152,8 @@ class Offering(db.Model):
                 })
             return ratings_json
 
-        overall_satisfaction_avg = db.session.query(func.avg(Rating.overall_satisfaction))\
-            .filter(Rating.offering_id == self.id).one()[0]
+        overall_satisfaction_avg = int(db.session.query(func.avg(Rating.overall_satisfaction))
+                                       .filter(Rating.offering_id == self.id).one()[0])
 
         percent_recommended = db.session.query(func.count(Rating.id))\
             .filter(Rating.offering_id == self.id, Rating.recommended == True).one()[0] * 100.0 / num_ratings  # noqa
@@ -195,17 +190,17 @@ class Offering(db.Model):
                 .filter(Rating.offering_id == self.id, Rating.tutorial_attendance == True).one()[0] * 100.0 / num_ratings  # noqa
 
             ratings_json.update({
-                'interesting_avg': interesting_avg,
-                'challenging_avg': challenging_avg,
-                'time_consuming_avg': time_consuming_avg,
-                'useful_avg': useful_avg,
-                'lecture_quality_avg': lecture_quality_avg,
-                'assessment_enjoyable_avg': assessment_enjoyable_avg,
-                'assessment_challenging_avg': assessment_challenging_avg,
-                'assessment_relevant_avg': assessment_relevant_avg,
-                'percent_lecture_videos': percent_lecture_videos,
-                'percent_lecture_attendance': percent_lecture_attendance,
-                'percent_tutorial_attendance': percent_tutorial_attendance
+                'interesting_avg': int(interesting_avg),
+                'challenging_avg': int(challenging_avg),
+                'time_consuming_avg': int(time_consuming_avg),
+                'useful_avg': int(useful_avg),
+                'lecture_quality_avg': int(lecture_quality_avg),
+                'assessment_enjoyable_avg': int(assessment_enjoyable_avg),
+                'assessment_challenging_avg': int(assessment_challenging_avg),
+                'assessment_relevant_avg': int(assessment_relevant_avg),
+                'percent_lecture_videos': int(percent_lecture_videos),
+                'percent_lecture_attendance': int(percent_lecture_attendance),
+                'percent_tutorial_attendance': int(percent_tutorial_attendance)
             })
 
         return ratings_json
