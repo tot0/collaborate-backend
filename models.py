@@ -57,7 +57,7 @@ class Course(db.Model):
         }
 
     def get_aggregate_ratings(self):
-        sems = ['sem_0', 'sem_1', 'sem_2']
+        sems = ['sem_0', 'sem_1', 'sem_2', 'overall']
 
         ratings = {sem: {'num_ratings': 0.0} for sem in sems}
         sem_ratings_sums = {sem: {'sum_ratings': 0.0, 'num_recommendations': 0.0} for sem in sems}
