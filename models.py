@@ -36,11 +36,9 @@ class Course(db.Model):
     # backref attributes:
     # offerings
 
-    def __init__(self, code, title, description, lecturer):
+    def __init__(self, code, title):
         self.code = code
         self.title = title
-        self.description = description
-        self.lecturer = lecturer
 
     def __repr__(self):
         return '<Course %r>' % self.code
@@ -66,23 +64,29 @@ class Offering(db.Model):
     # backref attributes:
     # ratings
 
-    def __init__(self, course, year, semester):
+    def __init__(self, course, description, lecturer, year, semester):
         self.course = course
+        self.description = description
+        self.lecturer = lecturer
         self.year = year
         self.semester = semester
 
     def __repr__(self):
         return '<Offering %r %r %r>' % (self.course.code, self.year, self.semester)
 
-    def to_JSON(self):
-        return {
+    def to_JSON(self, include_course=True):
+        offering_json = {
             'id': self.id,
-            'course': self.course.to_JSON(),
             'description': self.description,
             'lecturer': self.lecturer.to_JSON(),
             'year': self.year,
             'semester': self.semester
         }
+
+        if include_course:
+            offering_json['course'] = self.course.to_JSON()
+
+        return offering_json
 
 
 class Lecturer(db.Model):
