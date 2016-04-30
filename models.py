@@ -77,7 +77,12 @@ class Course(db.Model):
                     ratings[sem]['num_ratings'] += rating_count
                     sem_ratings_sums[sem]['sum_ratings'] += rating_sum
                     sem_ratings_sums[sem]['num_recommendations'] += num_recommendations
+
+                    ratings['overall']['num_ratings'] += rating_count
+                    sem_ratings_sums['overall']['sum_ratings'] += rating_sum
+                    sem_ratings_sums['overall']['num_recommendations'] += num_recommendations
                     break
+
         for sem in sems:
             if ratings[sem]['num_ratings']:
                 ratings[sem]['avg_rating'] = int(sem_ratings_sums[sem]['sum_ratings'] / ratings[sem]['num_ratings'])
