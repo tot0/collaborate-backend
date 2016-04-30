@@ -49,28 +49,35 @@ class Course(db.Model):
         return {
             'id': self.id,
             'code': self.code,
-            'title': self.title
+            'title': self.title,
+            'ratings': self.get_aggregate_ratings()
         }
 
     def get_aggregate_ratings(self):
         ratings = {sem: {'num_ratings': 0.0} for sem in ('sem_1', 'sem_2')}
-        sem_ratings_sums = {sem: {'sum_ratings': 0.0} for sem in ('sem_1', 'sem_2')}
+        sem_ratings_sums = {sem: {'sum_ratings': 0.0, 'num_recommendations': 0.0} for sem in ('sem_1', 'sem_2')}
         for offering in self.offerings:
             rating = db.session.query(func.sum(Rating.overall_satisfaction).label('sum'),
                                       func.count(Rating.overall_satisfaction).label('count'))\
                 .filter(Rating.offering_id == offering.id).one()
+            num_recommendations = db.session.query(func.count(Rating.overall_satisfaction).label('count'))\
+                .filter(Rating.offering_id == offering.id, Rating.recommended == True).one()[0]
             rating_sum, rating_count = rating
             if rating_sum is None:
                 continue
             if offering.semester == 1:
                 ratings['sem_1']['num_ratings'] += rating_count
                 sem_ratings_sums['sem_1']['sum_ratings'] += rating_sum
+                sem_ratings_sums['sem_1']['num_recommendations'] += num_recommendations
             elif offering.semester == 2:
                 ratings['sem_2']['num_ratings'] += rating_count
                 sem_ratings_sums['sem_2']['sum_ratings'] += rating_sum
+                sem_ratings_sums['sem_2']['num_recommendations'] += num_recommendations
         for sem in ('sem_1', 'sem_2'):
             if ratings[sem]['num_ratings']:
                 ratings[sem]['avg_rating'] = sem_ratings_sums[sem]['sum_ratings'] / ratings[sem]['num_ratings']
+                ratings[sem]['percent_recommended'] = (
+                    sem_ratings_sums[sem]['num_recommendations'] / ratings[sem]['num_ratings']) * 100
         return ratings
 
 
