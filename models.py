@@ -60,6 +60,8 @@ class Course(db.Model):
                                       func.count(Rating.overall_satisfaction).label('count'))\
                 .filter(Rating.offering_id == offering.id).one()
             rating_sum, rating_count = rating
+            if rating_sum is None:
+                continue
             if offering.semester == 1:
                 ratings['sem_1']['num_ratings'] += rating_count
                 sem_ratings_sums['sem_1']['sum_ratings'] += rating_sum
