@@ -3,9 +3,18 @@ from __future__ import (
     absolute_import,
 )
 
+from datetime import timedelta
 import json
-from flask import Flask, abort, request
-from functools import wraps
+from flask import (
+    Flask,
+    Response,
+    abort,
+    current_app,
+    jsonify,
+    make_response,
+    request
+)
+from functools import wraps, update_wrapper
 from sqlalchemy.sql.expression import or_
 import requests
 
@@ -56,116 +65,118 @@ def needs_auth(f):
     return decorator
 
 
+# thanks to http://flask.pocoo.org/snippets/56/
+def crossdomain(origin=None, methods=None, headers=None,
+                max_age=21600, attach_to_all=True,
+                automatic_options=True):
+    if methods is not None:
+        methods = ', '.join(sorted(x.upper() for x in methods))
+    if headers is not None and not isinstance(headers, basestring):
+        headers = ', '.join(x.upper() for x in headers)
+    if not isinstance(origin, basestring):
+        origin = ', '.join(origin)
+    if isinstance(max_age, timedelta):
+        max_age = max_age.total_seconds()
+
+    def get_methods():
+        if methods is not None:
+            return methods
+
+        options_resp = current_app.make_default_options_response()
+        return options_resp.headers['allow']
+
+    def decorator(f):
+        def wrapped_function(*args, **kwargs):
+            if automatic_options and request.method == 'OPTIONS':
+                resp = current_app.make_default_options_response()
+            else:
+                resp = make_response(f(*args, **kwargs))
+            if not attach_to_all and request.method != 'OPTIONS':
+                return resp
+
+            h = resp.headers
+
+            h['Access-Control-Allow-Origin'] = origin
+            h['Access-Control-Allow-Methods'] = get_methods()
+            h['Access-Control-Max-Age'] = str(max_age)
+            if headers is not None:
+                h['Access-Control-Allow-Headers'] = headers
+            return resp
+
+        f.provide_automatic_options = False
+        return update_wrapper(wrapped_function, f)
+    return decorator
+
+
 @app.route("/get_gentrified", methods=['GET'])
+@crossdomain(origin='*')
 def get_gentrified():
-    return json.dumps({
-        "memes": "spicy"
-    })
+    return jsonify(memes="spicy")
 
 
 @app.route("/offerings/<offering_id>/ratings", methods=['POST'])
 @needs_auth
+@crossdomain(origin='*')
 def post_rating(user, offering_id):
     try:
         print(request.data)
         rating_json = json.loads(request.data)
     except:
-        return '{"error":"invalid json"}'
+        return jsonify(error="invalid json")
     if not rating_json:
-        return '{"error":"no rating given"}'
+        return jsonify(error="no rating given")
 
     offering = Offering.query.filter_by(id=offering_id).first()
     if offering is None:
-        return '{"error":"offering not found"}'
+        return jsonify(error="offering not found")
 
     rating_json['user_id'] = user.id
     new_rating = Rating.from_json(rating_json)
     db.session.add(new_rating)
     db.session.commit()
-    return '{}'
+    return jsonify()
 
 
 @app.route("/offerings/<offering_id>", methods=['GET'])
+@crossdomain(origin='*')
 def get_offering_info(offering_id):
     offering = Offering.query.filter_by(id=offering_id).first()
     if offering is None:
-        return '{"error":"offering not found"}'
+        return jsonify(error="offering not found")
     offering_json = offering.to_JSON()
     offering_json['ratings'] = [rating.to_JSON(include_offering=False)
                                 for rating in offering.ratings]
-    return json.dumps(offering_json)
+    return jsonify(**offering_json)
 
 
 @app.route("/courses/<course_id>", methods=['GET'])
+@crossdomain(origin='*')
 def get_course_info(course_id):
     course = Course.query.filter_by(id=course_id).first()
     if course is None:
-        return '{"error":"course not found"}'
+        return jsonify(error="course not found")
     course_json = course.to_JSON()
     course_json['offerings'] = [offering.to_JSON(include_course=False) for offering in course.offerings]
     course_json['ratings'] = course.get_aggregate_ratings()
-    return json.dumps(course_json)
+    return jsonify(**course_json)
 
 
 @app.route('/courses', methods=['GET'])
+@crossdomain(origin='*')
 def search_courses():
     search_query = '%' + request.args.get('q', '') + '%'
     courses = set(Course.query.filter(or_(Course.title.like(search_query),
                                           Course.code.like(search_query))).limit(10).all())
     lecturers = Lecturer.query.filter(Lecturer.name.like(search_query)).limit(5).all()
     courses.update(offering.course for lecturer in lecturers for offering in lecturer.offerings)
-    return json.dumps(list(courses), default=lambda o: o.to_JSON())
 
-
-@app.route("/test_db", methods=['GET'])
-def test_db():
-    admin = User('admin', 1234)
-    dome = User('dome', 2134)
-    db.session.add(admin)
-    db.session.add(dome)
-    db.session.commit()
-    users = User.query.all()
-
-    wobcke = Lecturer('Wayne Wobcke')
-    db.session.add(wobcke)
-    db.session.commit()
-    lecturers = Lecturer.query.all()
-
-    comp2911 = Course('COMP2911', 'Engineering Design in Computing')
-    db.session.add(comp2911)
-    db.session.commit()
-    courses = Course.query.all()
-
-    comp2911y2016s2 = Offering(comp2911.id, 'memes', wobcke.id, 2016, 2)
-    db.session.add(comp2911y2016s2)
-    db.session.commit()
-    offerings = Offering.query.all()
-
-    rating = Rating(dome.id, comp2911y2016s2.id, 1, 'this is the worst course I\'ve ever done')
-    db.session.add(rating)
-    db.session.commit()
-    ratings = Rating.query.all()
-
-    le_return = json.dumps({
-        'users': [user.name for user in users],
-        'lecturers': [lec.name for lec in lecturers],
-        'courses': [[course.code, course.title, ] for course in courses],
-        'offerings': [[offering.course.code, offering.description, offering.lecturer.name, offering.year, offering.semester] for offering in offerings],
-        'ratings': [[rating.user.name, rating.offering.course.code, rating.overall_satisfaction] for rating in ratings]
-    })
-
-    '''db.session.delete(admin)
-    db.session.delete(dome)
-    db.session.delete(wobcke)
-    db.session.delete(comp2911)
-    db.session.delete(comp2911y2016s2)
-    db.session.delete(rating)
-    db.session.commit()'''
-
-    return le_return
+    resp = Response(json.dumps(list(courses), default=lambda o: o.to_JSON()))
+    resp.headers['Content-Type'] = 'application/json'
+    return resp
 
 
 @app.route("/verify_token", methods=['GET'])
+@crossdomain(origin='*')
 @needs_auth
 def verify_token(user):
     return "well meme'd, {}".format(user.name)
