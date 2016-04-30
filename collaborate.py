@@ -176,6 +176,7 @@ def search_courses():
     return resp
 
 
+# test endpoints, please ignore
 @app.route("/get_gentrified", methods=['GET'])
 @crossdomain(origin='*')
 def get_gentrified():
