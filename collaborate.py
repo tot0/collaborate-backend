@@ -3,9 +3,10 @@ from __future__ import (
     absolute_import,
 )
 
+from datetime import timedelta
 import json
-from flask import Flask, abort, request
-from functools import wraps
+from flask import Flask, abort, current_app, make_response, request
+from functools import wraps, update_wrapper
 from sqlalchemy.sql.expression import or_
 import requests
 
@@ -56,7 +57,51 @@ def needs_auth(f):
     return decorator
 
 
+# thanks to http://flask.pocoo.org/snippets/56/
+def crossdomain(origin=None, methods=None, headers=None,
+                max_age=21600, attach_to_all=True,
+                automatic_options=True):
+    if methods is not None:
+        methods = ', '.join(sorted(x.upper() for x in methods))
+    if headers is not None and not isinstance(headers, basestring):
+        headers = ', '.join(x.upper() for x in headers)
+    if not isinstance(origin, basestring):
+        origin = ', '.join(origin)
+    if isinstance(max_age, timedelta):
+        max_age = max_age.total_seconds()
+
+    def get_methods():
+        if methods is not None:
+            return methods
+
+        options_resp = current_app.make_default_options_response()
+        return options_resp.headers['allow']
+
+    def decorator(f):
+        def wrapped_function(*args, **kwargs):
+            if automatic_options and request.method == 'OPTIONS':
+                resp = current_app.make_default_options_response()
+            else:
+                resp = make_response(f(*args, **kwargs))
+            if not attach_to_all and request.method != 'OPTIONS':
+                return resp
+
+            h = resp.headers
+
+            h['Access-Control-Allow-Origin'] = origin
+            h['Access-Control-Allow-Methods'] = get_methods()
+            h['Access-Control-Max-Age'] = str(max_age)
+            if headers is not None:
+                h['Access-Control-Allow-Headers'] = headers
+            return resp
+
+        f.provide_automatic_options = False
+        return update_wrapper(wrapped_function, f)
+    return decorator
+
+
 @app.route("/get_gentrified", methods=['GET'])
+@crossdomain(origin='*')
 def get_gentrified():
     return json.dumps({
         "memes": "spicy"
@@ -65,6 +110,7 @@ def get_gentrified():
 
 @app.route("/offerings/<offering_id>/ratings", methods=['POST'])
 @needs_auth
+@crossdomain(origin='*')
 def post_rating(user, offering_id):
     try:
         print(request.data)
@@ -86,6 +132,7 @@ def post_rating(user, offering_id):
 
 
 @app.route("/offerings/<offering_id>", methods=['GET'])
+@crossdomain(origin='*')
 def get_offering_info(offering_id):
     offering = Offering.query.filter_by(id=offering_id).first()
     if offering is None:
@@ -97,6 +144,7 @@ def get_offering_info(offering_id):
 
 
 @app.route("/courses/<course_id>", methods=['GET'])
+@crossdomain(origin='*')
 def get_course_info(course_id):
     course = Course.query.filter_by(id=course_id).first()
     if course is None:
@@ -107,6 +155,7 @@ def get_course_info(course_id):
 
 
 @app.route('/courses', methods=['GET'])
+@crossdomain(origin='*')
 def search_courses():
     search_query = '%' + request.args.get('q', '') + '%'
     courses = set(Course.query.filter(or_(Course.title.like(search_query),
@@ -117,6 +166,7 @@ def search_courses():
 
 
 @app.route("/test_db", methods=['GET'])
+@crossdomain(origin='*')
 def test_db():
     admin = User('admin', 1234)
     dome = User('dome', 2134)
@@ -165,6 +215,7 @@ def test_db():
 
 
 @app.route("/verify_token", methods=['GET'])
+@crossdomain(origin='*')
 @needs_auth
 def verify_token(user):
     return "well meme'd, {}".format(user.name)

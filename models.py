@@ -51,6 +51,7 @@ class Course(db.Model):
         }
 
     def get_aggregate_ratings(semester):
+        pass
 
 
 class Offering(db.Model):
