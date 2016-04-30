@@ -109,7 +109,7 @@ def crossdomain(origin=None, methods=None, headers=None,
     return decorator
 
 
-@app.route("/offerings/<offering_id>/ratings", methods=['POST'])
+@app.route("/offerings/<offering_id>/ratings", methods=['POST', 'OPTIONS'])
 @needs_auth
 @crossdomain(origin='*')
 def post_rating(user, offering_id):
