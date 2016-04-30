@@ -54,8 +54,10 @@ class Course(db.Model):
         }
 
     def get_aggregate_ratings(self):
-        ratings = {sem: {'num_ratings': 0.0} for sem in ('sem_1', 'sem_2')}
-        sem_ratings_sums = {sem: {'sum_ratings': 0.0, 'num_recommendations': 0.0} for sem in ('sem_1', 'sem_2')}
+        sems = ['sem_0', 'sem_1', 'sem_2']
+
+        ratings = {sem: {'num_ratings': 0.0} for sem in sems}
+        sem_ratings_sums = {sem: {'sum_ratings': 0.0, 'num_recommendations': 0.0} for sem in sems}
         for offering in self.offerings:
             rating = db.session.query(func.sum(Rating.overall_satisfaction),
                                       func.count(Rating.id))\
@@ -65,15 +67,15 @@ class Course(db.Model):
             rating_sum, rating_count = rating
             if rating_sum is None:
                 continue
-            if offering.semester == 1:
-                ratings['sem_1']['num_ratings'] += rating_count
-                sem_ratings_sums['sem_1']['sum_ratings'] += rating_sum
-                sem_ratings_sums['sem_1']['num_recommendations'] += num_recommendations
-            elif offering.semester == 2:
-                ratings['sem_2']['num_ratings'] += rating_count
-                sem_ratings_sums['sem_2']['sum_ratings'] += rating_sum
-                sem_ratings_sums['sem_2']['num_recommendations'] += num_recommendations
-        for sem in ('sem_1', 'sem_2'):
+
+            for i in xrange(3):
+                if offering.semester == i:
+                    sem = 'sem_%d' % i
+                    ratings[sem]['num_ratings'] += rating_count
+                    sem_ratings_sums[sem]['sum_ratings'] += rating_sum
+                    sem_ratings_sums[sem]['num_recommendations'] += num_recommendations
+                    break
+        for sem in sems:
             if ratings[sem]['num_ratings']:
                 ratings[sem]['avg_rating'] = sem_ratings_sums[sem]['sum_ratings'] / ratings[sem]['num_ratings']
                 ratings[sem]['percent_recommended'] = (
