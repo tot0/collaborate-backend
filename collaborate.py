@@ -167,8 +167,8 @@ def get_course_info(course_id):
 def search_courses():
     search_query = '%' + request.args.get('q', '') + '%'
     courses = set(Course.query.filter(or_(Course.title.like(search_query),
-                                          Course.code.like(search_query))).limit(10).all())
-    lecturers = Lecturer.query.filter(Lecturer.name.like(search_query)).limit(5).all()
+                                          Course.code.like(search_query))).all())
+    lecturers = Lecturer.query.filter(Lecturer.name.like(search_query)).all()
     courses.update(offering.course for lecturer in lecturers for offering in lecturer.offerings)
 
     resp = Response(json.dumps(list(courses), default=lambda o: o.to_JSON()))
