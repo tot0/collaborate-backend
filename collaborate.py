@@ -109,12 +109,6 @@ def crossdomain(origin=None, methods=None, headers=None,
     return decorator
 
 
-@app.route("/get_gentrified", methods=['GET'])
-@crossdomain(origin='*')
-def get_gentrified():
-    return jsonify(memes="spicy")
-
-
 @app.route("/offerings/<offering_id>/ratings", methods=['POST'])
 @needs_auth
 @crossdomain(origin='*')
@@ -130,6 +124,11 @@ def post_rating(user, offering_id):
     offering = Offering.query.filter_by(id=offering_id).first()
     if offering is None:
         return jsonify(error="offering not found")
+
+    existing_rating = Rating.query.filter_by(user_id=user.id,
+                                             offering_id=offering_id).first()
+    if existing_rating is not None:
+        return jsonify(error="rating already exists")
 
     rating_json['user_id'] = user.id
     rating_json['offering_id'] = offering_id
@@ -167,13 +166,20 @@ def get_course_info(course_id):
 def search_courses():
     search_query = '%' + request.args.get('q', '') + '%'
     courses = set(Course.query.filter(or_(Course.title.like(search_query),
-                                          Course.code.like(search_query))).limit(10).all())
-    lecturers = Lecturer.query.filter(Lecturer.name.like(search_query)).limit(5).all()
+                                          Course.code.like(search_query))).all())
+    lecturers = Lecturer.query.filter(Lecturer.name.like(search_query)).all()
     courses.update(offering.course for lecturer in lecturers for offering in lecturer.offerings)
 
     resp = Response(json.dumps(list(courses), default=lambda o: o.to_JSON()))
     resp.headers['Content-Type'] = 'application/json'
     return resp
+
+
+# test endpoints, please ignore
+@app.route("/get_gentrified", methods=['GET'])
+@crossdomain(origin='*')
+def get_gentrified():
+    return jsonify(memes="spicy")
 
 
 @app.route("/verify_token", methods=['GET'])
