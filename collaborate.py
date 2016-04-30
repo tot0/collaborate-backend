@@ -165,55 +165,6 @@ def search_courses():
     return json.dumps(list(courses), default=lambda o: o.to_JSON())
 
 
-@app.route("/test_db", methods=['GET'])
-@crossdomain(origin='*')
-def test_db():
-    admin = User('admin', 1234)
-    dome = User('dome', 2134)
-    db.session.add(admin)
-    db.session.add(dome)
-    db.session.commit()
-    users = User.query.all()
-
-    wobcke = Lecturer('Wayne Wobcke')
-    db.session.add(wobcke)
-    db.session.commit()
-    lecturers = Lecturer.query.all()
-
-    comp2911 = Course('COMP2911', 'Engineering Design in Computing')
-    db.session.add(comp2911)
-    db.session.commit()
-    courses = Course.query.all()
-
-    comp2911y2016s2 = Offering(comp2911.id, 'memes', wobcke.id, 2016, 2)
-    db.session.add(comp2911y2016s2)
-    db.session.commit()
-    offerings = Offering.query.all()
-
-    rating = Rating(dome.id, comp2911y2016s2.id, 1, 'this is the worst course I\'ve ever done')
-    db.session.add(rating)
-    db.session.commit()
-    ratings = Rating.query.all()
-
-    le_return = json.dumps({
-        'users': [user.name for user in users],
-        'lecturers': [lec.name for lec in lecturers],
-        'courses': [[course.code, course.title, ] for course in courses],
-        'offerings': [[offering.course.code, offering.description, offering.lecturer.name, offering.year, offering.semester] for offering in offerings],
-        'ratings': [[rating.user.name, rating.offering.course.code, rating.overall_satisfaction] for rating in ratings]
-    })
-
-    '''db.session.delete(admin)
-    db.session.delete(dome)
-    db.session.delete(wobcke)
-    db.session.delete(comp2911)
-    db.session.delete(comp2911y2016s2)
-    db.session.delete(rating)
-    db.session.commit()'''
-
-    return le_return
-
-
 @app.route("/verify_token", methods=['GET'])
 @crossdomain(origin='*')
 @needs_auth
