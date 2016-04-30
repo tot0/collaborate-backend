@@ -25,7 +25,7 @@ db.init_app(app)
 
 # decorator for checking access token
 def needs_auth(old_func):
-    def new_func(*args, **kwargs):
+    def decorator(*args, **kwargs):
         try:
             token = request.headers.get('X-Access-Token')
             if not token:
@@ -51,7 +51,7 @@ def needs_auth(old_func):
 
         return old_func(user, *args, **kwargs)
 
-    return new_func
+    return decorator
 
 
 @app.route("/get_gentrified", methods=['GET'])
@@ -61,11 +61,43 @@ def get_gentrified():
     })
 
 
+@needs_auth
+@app.route("/offerings/<offering_id>/ratings", methods=['POST'])
+def post_rating(user, offering_id):
+    try:
+        rating_json = json.loads(request.args.get('rating', ''))
+    except:
+        return '{"error":"invalid json"}'
+    if not rating_json:
+        return '{"error":"no rating given"}'
+
+    offering = Offering.query.filter_by(id=offering_id).first()
+    if offering is None:
+        return '{"error":"offering not found"}'
+
+    new_rating = Rating.from_json(rating_json)
+    new_rating['user_id'] = user.id
+    db.session.add(new_rating)
+    db.session.commit()
+    return '{}'
+
+
+@app.route("/offerings/<offering_id>", methods=['GET'])
+def get_offering_info(offering_id):
+    offering = Offering.query.filter_by(id=offering_id).first()
+    if offering is None:
+        return '{"error":"offering not found"}'
+    offering_json = offering.to_JSON()
+    offering_json['ratings'] = [rating.to_JSON(include_offering=False)
+                                for rating in offering.ratings]
+    return json.dumps(offering_json)
+
+
 @app.route("/courses/<course_id>", methods=['GET'])
 def get_course_info(course_id):
     course = Course.query.filter_by(id=course_id).first()
     if course is None:
-        return '{}'
+        return '{"error":"course not found"}'
     course_json = course.to_JSON()
     course_json['offerings'] = [offering.to_JSON(include_course=False) for offering in course.offerings]
     return json.dumps(course_json)
@@ -100,12 +132,12 @@ def test_db():
     db.session.commit()
     courses = Course.query.all()
 
-    comp2911y2016s2 = Offering(comp2911, 'memes', wobcke, 2016, 2)
+    comp2911y2016s2 = Offering(comp2911.id, 'memes', wobcke.id, 2016, 2)
     db.session.add(comp2911y2016s2)
     db.session.commit()
     offerings = Offering.query.all()
 
-    rating = Rating(dome, comp2911y2016s2, 1)
+    rating = Rating(dome.id, comp2911y2016s2.id, 1, 'this is the worst course I\'ve ever done')
     db.session.add(rating)
     db.session.commit()
     ratings = Rating.query.all()
@@ -129,8 +161,8 @@ def test_db():
     return le_return
 
 
-@app.route("/verify_token", methods=['GET'])
 @needs_auth
+@app.route("/verify_token", methods=['GET'])
 def verify_token(user):
     return "well meme'd, {}".format(user.name)
 

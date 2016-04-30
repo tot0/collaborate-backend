@@ -64,10 +64,10 @@ class Offering(db.Model):
     # backref attributes:
     # ratings
 
-    def __init__(self, course, description, lecturer, year, semester):
-        self.course = course
+    def __init__(self, course_id, description, lecturer_id, year, semester):
+        self.course_id = course_id
         self.description = description
-        self.lecturer = lecturer
+        self.lecturer_id = lecturer_id
         self.year = year
         self.semester = semester
 
@@ -116,19 +116,32 @@ class Rating(db.Model):
     offering_id = db.Column(db.Integer, db.ForeignKey('offering.id'))
     offering = db.relationship('Offering', backref=db.backref('ratings', lazy='dynamic'))
     overall_satisfaction = db.Column(db.Integer)
+    comment = db.Column(db.Text)
 
-    def __init__(self, user, offering, overall_satisfaction):
-        self.user = user
-        self.offering = offering
+    def __init__(self, user_id, offering_id, overall_satisfaction, comment):
+        self.user_id = user_id
+        self.offering_id = offering_id
         self.overall_satisfaction = overall_satisfaction
+        self.comment = comment
+
+    @classmethod
+    def from_json(cls, json):
+        return cls(json['user_id'],
+                   json['offering_id'],
+                   json['overall_satisfaction'],
+                   json['comment'])
 
     def __repr__(self):
         return '<Rating from %r for %r>' % (self.user, self.offering)
 
-    def to_JSON(self):
-        return {
+    def to_JSON(self, include_offering=True):
+        rating_json = {
             'id': self.id,
             'user': self.user.to_JSON(),
-            'offering': self.offering.to_JSON(),
-            'overall_satisfaction': self.overall_satisfaction
+            'overall_satisfaction': self.overall_satisfaction,
+            'comment': self.comment
         }
+        if include_offering:
+            rating_json['offering'] = self.offering.to_JSON()
+
+        return rating_json
