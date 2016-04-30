@@ -101,7 +101,7 @@ def test_db():
         'users': [user.name for user in users],
         'lecturers': [lec.name for lec in lecturers],
         'courses': [[course.code, course.title, course.description, course.lecturer.name] for course in courses],
-        'offerings': [[offering.course.code, offering.year, offering.session] for offering in offerings],
+        'offerings': [[offering.course.code, offering.year, offering.semester] for offering in offerings],
         'ratings': [[rating.user.name, rating.offering.course.code, rating.overall_satisfaction] for rating in ratings]
     })
 

@@ -61,18 +61,18 @@ class Offering(db.Model):
     lecturer_id = db.Column(db.Integer, db.ForeignKey('lecturer.id'))
     lecturer = db.relationship('Lecturer', backref=db.backref('courses', lazy='dynamic'))
     year = db.Column(db.Integer)
-    session = db.Column(db.Integer)
+    semester = db.Column(db.Integer)
 
     # backref attributes:
     # ratings
 
-    def __init__(self, course, year, session):
+    def __init__(self, course, year, semester):
         self.course = course
         self.year = year
-        self.session = session
+        self.semester = semester
 
     def __repr__(self):
-        return '<Offering %r %r %r>' % (self.course.code, self.year, self.session)
+        return '<Offering %r %r %r>' % (self.course.code, self.year, self.semester)
 
     def to_JSON(self):
         return {
@@ -81,7 +81,7 @@ class Offering(db.Model):
             'description': self.description,
             'lecturer': self.lecturer.to_JSON(),
             'year': self.year,
-            'session': self.session
+            'semester': self.semester
         }
 
 
