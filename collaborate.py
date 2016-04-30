@@ -109,12 +109,6 @@ def crossdomain(origin=None, methods=None, headers=None,
     return decorator
 
 
-@app.route("/get_gentrified", methods=['GET'])
-@crossdomain(origin='*')
-def get_gentrified():
-    return jsonify(memes="spicy")
-
-
 @app.route("/offerings/<offering_id>/ratings", methods=['POST'])
 @needs_auth
 @crossdomain(origin='*')
@@ -130,6 +124,11 @@ def post_rating(user, offering_id):
     offering = Offering.query.filter_by(id=offering_id).first()
     if offering is None:
         return jsonify(error="offering not found")
+
+    existing_rating = Rating.query.filter_by(user_id=user.id,
+                                             offering_id=offering_id).first()
+    if existing_rating is not None:
+        return jsonify(error="rating already exists")
 
     rating_json['user_id'] = user.id
     new_rating = Rating.from_json(rating_json)
@@ -174,6 +173,12 @@ def search_courses():
     resp = Response(json.dumps(list(courses), default=lambda o: o.to_JSON()))
     resp.headers['Content-Type'] = 'application/json'
     return resp
+
+
+@app.route("/get_gentrified", methods=['GET'])
+@crossdomain(origin='*')
+def get_gentrified():
+    return jsonify(memes="spicy")
 
 
 @app.route("/verify_token", methods=['GET'])
