@@ -53,25 +53,27 @@ def needs_auth(old_func):
     return new_func
 
 
-@app.route("/get_gentrified")
+@app.route("/get_gentrified", methods=['GET'])
 def get_gentrified():
     return json.dumps({
         "memes": "spicy"
     })
 
 
-@app.route("/courses/<course_id>")
+@app.route("/courses/<course_id>", methods=['GET'])
 def get_course_info(course_id):
     course = Course.query.filter_by(id=course_id).first()
     if course is None:
         return '{}'
-    return json.dumps(course, default=lambda o: o.to_JSON())
+    course_json = course.to_JSON()
+    course_json['offerings'] = [offering.to_JSON(include_course=False) for offering in course.offerings]
+    return json.dumps(course_json)
 
 
-@app.route("/test_db")
+@app.route("/test_db", methods=['GET'])
 def test_db():
-    admin = User('admin')
-    dome = User('dome')
+    admin = User('admin', 1234)
+    dome = User('dome', 2134)
     db.session.add(admin)
     db.session.add(dome)
     db.session.commit()
@@ -82,12 +84,12 @@ def test_db():
     db.session.commit()
     lecturers = Lecturer.query.all()
 
-    comp2911 = Course('COMP2911', 'Engineering Design in Computing', 'memes', wobcke)
+    comp2911 = Course('COMP2911', 'Engineering Design in Computing')
     db.session.add(comp2911)
     db.session.commit()
     courses = Course.query.all()
 
-    comp2911y2016s2 = Offering(comp2911, 2016, 2)
+    comp2911y2016s2 = Offering(comp2911, 'memes', wobcke, 2016, 2)
     db.session.add(comp2911y2016s2)
     db.session.commit()
     offerings = Offering.query.all()
@@ -100,8 +102,8 @@ def test_db():
     le_return = json.dumps({
         'users': [user.name for user in users],
         'lecturers': [lec.name for lec in lecturers],
-        'courses': [[course.code, course.title, course.description, course.lecturer.name] for course in courses],
-        'offerings': [[offering.course.code, offering.year, offering.semester] for offering in offerings],
+        'courses': [[course.code, course.title, ] for course in courses],
+        'offerings': [[offering.course.code, offering.description, offering.lecturer.name, offering.year, offering.semester] for offering in offerings],
         'ratings': [[rating.user.name, rating.offering.course.code, rating.overall_satisfaction] for rating in ratings]
     })
 
@@ -116,7 +118,7 @@ def test_db():
     return le_return
 
 
-@app.route("/verify_token")
+@app.route("/verify_token", methods=['GET'])
 @needs_auth
 def verify_token(user):
     return "well meme'd, {}".format(user.name)
