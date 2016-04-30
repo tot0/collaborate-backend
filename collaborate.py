@@ -101,13 +101,11 @@ def crossdomain(origin=None, methods=None, headers=None,
             h['Access-Control-Allow-Methods'] = get_methods()
             h['Access-Control-Max-Age'] = str(max_age)
 
-            allowed_headers = []
             if headers is not None:
-                allowed_headers += headers
-            if 'X-Access-Token' not in allowed_headers:
-                allowed_headers.append('X-Access-Token')
-
-            h['Access-Control-Allow-Headers'] = allowed_headers
+                headers = 'X-Access-Token, ' + headers
+            else:
+                headers = 'X-Access-Token'
+            h['Access-Control-Allow-Headers'] = headers
 
             return resp
 
