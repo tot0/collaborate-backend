@@ -167,4 +167,4 @@ def verify_token(user):
     return "well meme'd, {}".format(user.name)
 
 if __name__ == '__main__':
-    app.run()
+    app.run(host='0.0.0.0')
