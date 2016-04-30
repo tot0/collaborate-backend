@@ -5,7 +5,15 @@ from __future__ import (
 
 from datetime import timedelta
 import json
-from flask import Flask, abort, current_app, make_response, request
+from flask import (
+    Flask,
+    Response,
+    abort,
+    current_app,
+    jsonify,
+    make_response,
+    request
+)
 from functools import wraps, update_wrapper
 from sqlalchemy.sql.expression import or_
 import requests
@@ -103,9 +111,7 @@ def crossdomain(origin=None, methods=None, headers=None,
 @app.route("/get_gentrified", methods=['GET'])
 @crossdomain(origin='*')
 def get_gentrified():
-    return json.dumps({
-        "memes": "spicy"
-    })
+    return jsonify(memes="spicy")
 
 
 @app.route("/offerings/<offering_id>/ratings", methods=['POST'])
@@ -116,19 +122,19 @@ def post_rating(user, offering_id):
         print(request.data)
         rating_json = json.loads(request.data)
     except:
-        return '{"error":"invalid json"}'
+        return jsonify(error="invalid json")
     if not rating_json:
-        return '{"error":"no rating given"}'
+        return jsonify(error="no rating given")
 
     offering = Offering.query.filter_by(id=offering_id).first()
     if offering is None:
-        return '{"error":"offering not found"}'
+        return jsonify(error="offering not found")
 
     rating_json['user_id'] = user.id
     new_rating = Rating.from_json(rating_json)
     db.session.add(new_rating)
     db.session.commit()
-    return '{}'
+    return jsonify()
 
 
 @app.route("/offerings/<offering_id>", methods=['GET'])
@@ -136,11 +142,11 @@ def post_rating(user, offering_id):
 def get_offering_info(offering_id):
     offering = Offering.query.filter_by(id=offering_id).first()
     if offering is None:
-        return '{"error":"offering not found"}'
+        return jsonify(error="offering not found")
     offering_json = offering.to_JSON()
     offering_json['ratings'] = [rating.to_JSON(include_offering=False)
                                 for rating in offering.ratings]
-    return json.dumps(offering_json)
+    return jsonify(**offering_json)
 
 
 @app.route("/courses/<course_id>", methods=['GET'])
@@ -148,10 +154,10 @@ def get_offering_info(offering_id):
 def get_course_info(course_id):
     course = Course.query.filter_by(id=course_id).first()
     if course is None:
-        return '{"error":"course not found"}'
+        return jsonify(error="course not found")
     course_json = course.to_JSON()
     course_json['offerings'] = [offering.to_JSON(include_course=False) for offering in course.offerings]
-    return json.dumps(course_json)
+    return jsonify(**course_json)
 
 
 @app.route('/courses', methods=['GET'])
@@ -162,7 +168,10 @@ def search_courses():
                                           Course.code.like(search_query))).limit(10).all())
     lecturers = Lecturer.query.filter(Lecturer.name.like(search_query)).limit(5).all()
     courses.update(offering.course for lecturer in lecturers for offering in lecturer.offerings)
-    return json.dumps(list(courses), default=lambda o: o.to_JSON())
+
+    resp = Response(json.dumps(list(courses), default=lambda o: o.to_JSON()))
+    resp.headers['Content-Type'] = 'application/json'
+    return resp
 
 
 @app.route("/verify_token", methods=['GET'])
