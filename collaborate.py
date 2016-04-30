@@ -110,8 +110,8 @@ def crossdomain(origin=None, methods=None, headers=None,
 
 
 @app.route("/offerings/<offering_id>/ratings", methods=['POST', 'OPTIONS'])
-@needs_auth
 @crossdomain(origin='*')
+@needs_auth
 def post_rating(user, offering_id):
     try:
         print(request.data)
