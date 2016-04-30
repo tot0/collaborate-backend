@@ -5,6 +5,7 @@ from __future__ import (
 
 import json
 from flask import Flask, abort, request
+from sqlalchemy.sql.expression import or_
 import requests
 
 from dbhelper import db
@@ -68,6 +69,16 @@ def get_course_info(course_id):
     course_json = course.to_JSON()
     course_json['offerings'] = [offering.to_JSON(include_course=False) for offering in course.offerings]
     return json.dumps(course_json)
+
+
+@app.route('/courses', methods=['GET'])
+def search_courses():
+    search_query = '%' + request.args.get('q', '') + '%'
+    courses = set(Course.query.filter(or_(Course.title.like(search_query),
+                                          Course.code.like(search_query))).limit(10).all())
+    lecturers = Lecturer.query.filter(Lecturer.name.like(search_query)).limit(5).all()
+    courses.update(offering.course for lecturer in lecturers for offering in lecturer.offerings)
+    return json.dumps(list(courses), default=lambda o: o.to_JSON())
 
 
 @app.route("/test_db", methods=['GET'])

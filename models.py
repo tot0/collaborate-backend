@@ -57,7 +57,7 @@ class Offering(db.Model):
     course = db.relationship('Course', backref=db.backref('offerings', lazy='dynamic'))
     description = db.Column(db.Text)
     lecturer_id = db.Column(db.Integer, db.ForeignKey('lecturer.id'))
-    lecturer = db.relationship('Lecturer', backref=db.backref('courses', lazy='dynamic'))
+    lecturer = db.relationship('Lecturer', backref=db.backref('offerings', lazy='dynamic'))
     year = db.Column(db.Integer)
     semester = db.Column(db.Integer)
 
@@ -94,7 +94,7 @@ class Lecturer(db.Model):
     name = db.Column(db.String(80))
 
     # backref attributes:
-    # courses
+    # offerings
 
     def __init__(self, name):
         self.name = name
