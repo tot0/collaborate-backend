@@ -132,6 +132,7 @@ def post_rating(user, offering_id):
         return jsonify(error="offering not found")
 
     rating_json['user_id'] = user.id
+    rating_json['offering_id'] = offering_id
     new_rating = Rating.from_json(rating_json)
     db.session.add(new_rating)
     db.session.commit()
