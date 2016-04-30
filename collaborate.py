@@ -147,6 +147,7 @@ def get_offering_info(offering_id):
     offering_json = offering.to_JSON()
     offering_json['ratings'] = [rating.to_JSON(include_offering=False)
                                 for rating in offering.ratings]
+    offering_json['aggregated_ratings'] = offering.get_aggregate_ratings(detailed=True)
     return jsonify(**offering_json)
 
 

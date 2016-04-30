@@ -57,11 +57,11 @@ class Course(db.Model):
         ratings = {sem: {'num_ratings': 0.0} for sem in ('sem_1', 'sem_2')}
         sem_ratings_sums = {sem: {'sum_ratings': 0.0, 'num_recommendations': 0.0} for sem in ('sem_1', 'sem_2')}
         for offering in self.offerings:
-            rating = db.session.query(func.sum(Rating.overall_satisfaction).label('sum'),
-                                      func.count(Rating.overall_satisfaction).label('count'))\
+            rating = db.session.query(func.sum(Rating.overall_satisfaction),
+                                      func.count(Rating.id))\
                 .filter(Rating.offering_id == offering.id).one()
-            num_recommendations = db.session.query(func.count(Rating.overall_satisfaction).label('count'))\
-                .filter(Rating.offering_id == offering.id, Rating.recommended == True).one()[0]
+            num_recommendations = db.session.query(func.count(Rating.id))\
+                .filter(Rating.offering_id == offering.id, Rating.recommended == True).one()[0]  # noqa
             rating_sum, rating_count = rating
             if rating_sum is None:
                 continue
@@ -78,6 +78,9 @@ class Course(db.Model):
                 ratings[sem]['avg_rating'] = sem_ratings_sums[sem]['sum_ratings'] / ratings[sem]['num_ratings']
                 ratings[sem]['percent_recommended'] = (
                     sem_ratings_sums[sem]['num_recommendations'] / ratings[sem]['num_ratings']) * 100
+            else:
+                ratings[sem]['avg_rating'] = 0
+                ratings[sem]['percent_recommended'] = 0
         return ratings
 
 
@@ -110,13 +113,92 @@ class Offering(db.Model):
             'description': self.description,
             'lecturer': self.lecturer.to_JSON(),
             'year': self.year,
-            'semester': self.semester
+            'semester': self.semester,
+            'aggregated_ratings': self.get_aggregate_ratings()
         }
 
         if include_course:
             offering_json['course'] = self.course.to_JSON()
 
         return offering_json
+
+    def get_aggregate_ratings(self, detailed=False):
+        num_ratings = db.session.query(func.count(Rating.id))\
+            .filter(Rating.offering_id == self.id).one()[0]
+        if not num_ratings:
+            ratings_json = {
+                'num_ratings': 0,
+                'overall_satisfaction_avg': 0,
+                'percent_recommended': 0
+            }
+            if detailed:
+                ratings_json.update({
+                    'interesting_avg': 0,
+                    'challenging_avg': 0,
+                    'time_consuming_avg': 0,
+                    'useful_avg': 0,
+                    'lecture_quality_avg': 0,
+                    'assessment_enjoyable_avg': 0,
+                    'assessment_challenging_avg': 0,
+                    'assessment_relevant_avg': 0,
+                    'percent_lecture_videos': 0,
+                    'percent_lecture_attendance': 0,
+                    'percent_tutorial_attendance': 0
+                })
+            return ratings_json
+
+        overall_satisfaction_avg = db.session.query(func.avg(Rating.overall_satisfaction))\
+            .filter(Rating.offering_id == self.id).one()[0]
+
+        percent_recommended = db.session.query(func.count(Rating.id))\
+            .filter(Rating.offering_id == self.id, Rating.recommended == True).one()[0] * 100.0 / num_ratings  # noqa
+
+        ratings_json = {
+            'num_ratings': num_ratings,
+            'overall_satisfaction_avg': overall_satisfaction_avg,
+            'percent_recommended': percent_recommended
+        }
+
+        if detailed:
+            (interesting_avg,
+             challenging_avg,
+             time_consuming_avg,
+             useful_avg,
+             lecture_quality_avg,
+             assessment_enjoyable_avg,
+             assessment_challenging_avg,
+             assessment_relevant_avg) = db.session.query(func.avg(Rating.interesting),
+                                                         func.avg(Rating.challenging),
+                                                         func.avg(Rating.time_consuming),
+                                                         func.avg(Rating.useful),
+                                                         func.avg(Rating.lecture_quality),
+                                                         func.avg(Rating.assessment_enjoyable),
+                                                         func.avg(Rating.assessment_challenging),
+                                                         func.avg(Rating.assessment_relevant))\
+                .filter(Rating.offering_id == self.id).one()
+
+            percent_lecture_videos = db.session.query(func.count(Rating.id))\
+                .filter(Rating.offering_id == self.id, Rating.lecture_videos == True).one()[0] * 100.0 / num_ratings  # noqa
+            percent_lecture_attendance = db.session.query(func.count(Rating.id))\
+                .filter(Rating.offering_id == self.id, Rating.lecture_attendance == True).one()[0] * 100.0 / num_ratings  # noqa
+            percent_tutorial_attendance = db.session.query(func.count(Rating.id))\
+                .filter(Rating.offering_id == self.id, Rating.tutorial_attendance == True).one()[0] * 100.0 / num_ratings  # noqa
+
+            ratings_json.update({
+                'interesting_avg': interesting_avg,
+                'challenging_avg': challenging_avg,
+                'time_consuming_avg': time_consuming_avg,
+                'useful_avg': useful_avg,
+                'lecture_quality_avg': lecture_quality_avg,
+                'assessment_enjoyable_avg': assessment_enjoyable_avg,
+                'assessment_challenging_avg': assessment_challenging_avg,
+                'assessment_relevant_avg': assessment_relevant_avg,
+                'percent_lecture_videos': percent_lecture_videos,
+                'percent_lecture_attendance': percent_lecture_attendance,
+                'percent_tutorial_attendance': percent_tutorial_attendance
+            })
+
+        return ratings_json
 
 
 class Lecturer(db.Model):
