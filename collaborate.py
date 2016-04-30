@@ -12,6 +12,7 @@ from models import (
     Course,
     Offering,
     Lecturer,
+    Rating,
 )
 
 app = Flask(__name__)
@@ -27,6 +28,14 @@ def get_gentrified():
     })
 
 
+@app.route("/courses/<course_code>")
+def get_course_info(course_code):
+    course = Course.query.filter_by(code=course_code.upper()).first()
+    if course is None:
+        return '{}'
+    return json.dumps(course, default=lambda o: o.to_JSON())
+
+
 @app.route("/test_db")
 def test_db():
     admin = User('admin')
@@ -35,10 +44,45 @@ def test_db():
     db.session.add(dome)
     db.session.commit()
     users = User.query.all()
-    db.session.delete(admin)
-    db.session.delete(dome)
+
+    wobcke = Lecturer('Wayne Wobcke')
+    db.session.add(wobcke)
     db.session.commit()
-    return json.dumps([user.username for user in users])
+    lecturers = Lecturer.query.all()
+
+    comp2911 = Course('COMP2911', 'Engineering Design in Computing', 'memes', wobcke)
+    db.session.add(comp2911)
+    db.session.commit()
+    courses = Course.query.all()
+
+    comp2911y2016s2 = Offering(comp2911, 2016, 2)
+    db.session.add(comp2911y2016s2)
+    db.session.commit()
+    offerings = Offering.query.all()
+
+    rating = Rating(dome, comp2911y2016s2, 1)
+    db.session.add(rating)
+    db.session.commit()
+    ratings = Rating.query.all()
+
+    le_return = json.dumps({
+        'users': [user.username for user in users],
+        'lecturers': [lec.name for lec in lecturers],
+        'courses': [[course.code, course.title, course.description, course.lecturer.name] for course in courses],
+        'offerings': [[offering.course.code, offering.year, offering.session] for offering in offerings],
+        'ratings': [[rating.user.username, rating.offering.course.code, rating.overall_satisfaction] for rating in ratings]
+    })
+
+    '''db.session.delete(admin)
+    db.session.delete(dome)
+    db.session.delete(wobcke)
+    db.session.delete(comp2911)
+    db.session.delete(comp2911y2016s2)
+    db.session.delete(rating)
+    db.session.commit()'''
+
+    return le_return
+
 
 if __name__ == '__main__':
     app.run()

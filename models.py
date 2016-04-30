@@ -19,14 +19,17 @@ class User(db.Model):
     def __repr__(self):
         return '<User %r>' % self.username
 
+    def to_JSON(self):
+        return {
+            'id': self.id,
+            'username': self.username
+        }
+
 
 class Course(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     code = db.Column(db.String(8), unique=True)
     title = db.Column(db.String(100))
-    description = db.Column(db.Text)
-    lecturer_id = db.Column(db.Integer, db.ForeignKey('lecturer.id'))
-    lecturer = db.relationship('Lecturer', backref=db.backref('courses', lazy='dynamic'))
 
     # backref attributes:
     # offerings
@@ -40,24 +43,44 @@ class Course(db.Model):
     def __repr__(self):
         return '<Course %r>' % self.code
 
+    def to_JSON(self):
+        return {
+            'id': self.id,
+            'code': self.code,
+            'title': self.title
+        }
+
 
 class Offering(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    year = db.Column(db.Integer)
-    session = db.Column(db.Integer)
     course_id = db.Column(db.Integer, db.ForeignKey('course.id'))
     course = db.relationship('Course', backref=db.backref('offerings', lazy='dynamic'))
+    description = db.Column(db.Text)
+    lecturer_id = db.Column(db.Integer, db.ForeignKey('lecturer.id'))
+    lecturer = db.relationship('Lecturer', backref=db.backref('courses', lazy='dynamic'))
+    year = db.Column(db.Integer)
+    session = db.Column(db.Integer)
 
     # backref attributes:
     # ratings
 
-    def __init__(self, year, session, course):
+    def __init__(self, course, year, session):
+        self.course = course
         self.year = year
         self.session = session
-        self.course = course
 
     def __repr__(self):
         return '<Offering %r %r %r>' % (self.course.code, self.year, self.session)
+
+    def to_JSON(self):
+        return {
+            'id': self.id,
+            'course': self.course.to_JSON(),
+            'description': self.description,
+            'lecturer': self.lecturer.to_JSON(),
+            'year': self.year,
+            'session': self.session
+        }
 
 
 class Lecturer(db.Model):
@@ -72,6 +95,12 @@ class Lecturer(db.Model):
 
     def __repr__(self):
         return '<Lecturer %r>' % self.name
+
+    def to_JSON(self):
+        return {
+            'id': self.id,
+            'name': self.name
+        }
 
 
 class Rating(db.Model):
@@ -89,3 +118,11 @@ class Rating(db.Model):
 
     def __repr__(self):
         return '<Rating from %r for %r>' % (self.user, self.offering)
+
+    def to_JSON(self):
+        return {
+            'id': self.id,
+            'user': self.user.to_JSON(),
+            'offering': self.offering.to_JSON(),
+            'overall_satisfaction': self.overall_satisfaction
+        }
