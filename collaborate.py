@@ -60,9 +60,9 @@ def get_gentrified():
     })
 
 
-@app.route("/courses/<course_code>")
-def get_course_info(course_code):
-    course = Course.query.filter_by(code=course_code.upper()).first()
+@app.route("/courses/<course_id>")
+def get_course_info(course_id):
+    course = Course.query.filter_by(id=course_id).first()
     if course is None:
         return '{}'
     return json.dumps(course, default=lambda o: o.to_JSON())
