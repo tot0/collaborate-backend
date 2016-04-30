@@ -102,6 +102,8 @@ with app.app_context():
                         lecturer_obj = Lecturer(name=lecturer)
                         db.session.add(lecturer_obj)
                         db.session.commit()
+
+                        existing_lecturers.add(lecturer)
                     else:
                         lecturer_obj = Lecturer.query.filter_by(name=lecturer).first()
 
