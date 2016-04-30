@@ -5,6 +5,7 @@ from __future__ import (
 
 import json
 from flask import Flask, abort, request
+from functools import wraps
 from sqlalchemy.sql.expression import or_
 import requests
 
@@ -24,7 +25,8 @@ db.init_app(app)
 
 
 # decorator for checking access token
-def needs_auth(old_func):
+def needs_auth(f):
+    @wraps(f)
     def decorator(*args, **kwargs):
         try:
             token = request.headers.get('X-Access-Token')
@@ -49,7 +51,7 @@ def needs_auth(old_func):
         db.session.add(user)
         db.session.commit()
 
-        return old_func(user, *args, **kwargs)
+        return f(user, *args, **kwargs)
 
     return decorator
 
@@ -61,11 +63,12 @@ def get_gentrified():
     })
 
 
-@needs_auth
 @app.route("/offerings/<offering_id>/ratings", methods=['POST'])
+@needs_auth
 def post_rating(user, offering_id):
     try:
-        rating_json = json.loads(request.args.get('rating', ''))
+        print(request.data)
+        rating_json = json.loads(request.data)
     except:
         return '{"error":"invalid json"}'
     if not rating_json:
@@ -75,8 +78,8 @@ def post_rating(user, offering_id):
     if offering is None:
         return '{"error":"offering not found"}'
 
+    rating_json['user_id'] = user.id
     new_rating = Rating.from_json(rating_json)
-    new_rating['user_id'] = user.id
     db.session.add(new_rating)
     db.session.commit()
     return '{}'
@@ -161,8 +164,8 @@ def test_db():
     return le_return
 
 
-@needs_auth
 @app.route("/verify_token", methods=['GET'])
+@needs_auth
 def verify_token(user):
     return "well meme'd, {}".format(user.name)
 

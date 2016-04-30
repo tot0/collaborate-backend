@@ -50,6 +50,8 @@ class Course(db.Model):
             'title': self.title
         }
 
+    def get_aggregate_ratings(semester):
+
 
 class Offering(db.Model):
     id = db.Column(db.Integer, primary_key=True)
