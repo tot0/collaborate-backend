@@ -3,6 +3,8 @@ from __future__ import (
     absolute_import,
 )
 
+from sqlalchemy.sql import func
+
 from dbhelper import db
 
 
@@ -50,7 +52,24 @@ class Course(db.Model):
             'title': self.title
         }
 
-    def get_aggregate_ratings(semester):
+    def get_aggregate_ratings(self):
+        ratings = {sem: {'num_ratings': 0.0} for sem in ('sem_1', 'sem_2')}
+        sem_ratings_sums = {sem: {'sum_ratings': 0.0} for sem in ('sem_1', 'sem_2')}
+        for offering in self.offerings:
+            rating = db.session.query(func.sum(Rating.overall_satisfaction).label('sum'),
+                                      func.count(Rating.overall_satisfaction).label('count'))\
+                .filter(Rating.offering_id == offering.id).one()
+            rating_sum, rating_count = rating
+            if offering.semester == 1:
+                ratings['sem_1']['num_ratings'] += rating_count
+                sem_ratings_sums['sem_1']['sum_ratings'] += rating_sum
+            elif offering.semester == 2:
+                ratings['sem_2']['num_ratings'] += rating_count
+                sem_ratings_sums['sem_2']['sum_ratings'] += rating_sum
+        for sem in ('sem_1', 'sem_2'):
+            if ratings[sem]['num_ratings']:
+                ratings[sem]['avg_rating'] = sem_ratings_sums[sem]['sum_ratings'] / ratings[sem]['num_ratings']
+        return ratings
 
 
 class Offering(db.Model):

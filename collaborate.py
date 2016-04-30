@@ -103,6 +103,7 @@ def get_course_info(course_id):
         return '{"error":"course not found"}'
     course_json = course.to_JSON()
     course_json['offerings'] = [offering.to_JSON(include_course=False) for offering in course.offerings]
+    course_json['ratings'] = course.get_aggregate_ratings()
     return json.dumps(course_json)
 
 
